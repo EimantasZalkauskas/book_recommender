@@ -1,0 +1,4 @@
+.venv
+.env
+pyproject.toml
+__pycache__/
