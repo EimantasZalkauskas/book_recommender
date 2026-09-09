@@ -12,9 +12,9 @@ from dotenv import load_dotenv
 import requests
 import os
 
-from app.db_models import SessionDep, User, create_db_and_tables
+from app.db_models import SessionDep, User, create_db_and_tables, AddBookRequest,Book,UserBook,DeleteUserBook
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 
 @asynccontextmanager
@@ -67,18 +67,30 @@ def get_users(
     return users
 
 @app.post("/users/add")
-def add_users(user: User, session: SessionDep) -> User:
+def add_users(user_info: User, session: SessionDep):
+    existing_user = session.exec(
+    select(User).where(User.name == user_info.name)
+    ).first()
+
+    if existing_user:
+        return {"msg": f"User with name {user_info.name} already exists"}
+
+    user = User(name=user_info.name, books=user_info.books)
     session.add(user)
     session.commit()
     session.refresh(user)
     return user
 
-@app.get("/users/{user_id}")
-def get_user(user_id: int, session: SessionDep) -> User:
-    user = session.get(User, user_id)
+
+@app.get("/users/{user_name}")
+def get_user(user_name: str, session: SessionDep) -> User:
+    user = session.exec(
+        select(User).where(User.name == user_name)
+    ).first()
+    if user:
+        return user
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
 
 @app.delete("/users/{user_id}")
 def delete_user(user_id: int, session: SessionDep):
@@ -88,3 +100,70 @@ def delete_user(user_id: int, session: SessionDep):
     session.delete(user)
     session.commit()
     return {"ok": True}
+
+@app.get('/user/books/{user_id}')
+def get_user_books(user_id, session: SessionDep):
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user.books
+
+@app.delete('/user/delete_book/')
+def delete_user_book(request: DeleteUserBook, session: SessionDep):
+    user = session.get(User, request.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user_book = session.exec(
+        select(UserBook).where(
+            (UserBook.user_id == request.user_id) &
+            (UserBook.book_id == request.book_id)
+        )
+    ).first()
+    session.delete(user_book)
+    session.commit()
+
+    return {
+        "ok": True,
+        "user_id": request.user_id,
+        "book_id": request.book_id,
+    }
+
+
+
+# BOOKS ROUTES
+
+
+@app.post('/books/add')
+def add_book(request: AddBookRequest, session: SessionDep):
+    user = session.get(User, request.user_id)
+    print(user)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    existing_book = session.exec(
+        select(Book).where(Book.title == request.book_obj.title)
+    ).first()
+
+    if not existing_book:
+        book_data = request.book_obj.model_dump(exclude={"id"})
+        existing_book = Book(**book_data)
+        session.add(existing_book)
+        session.commit()
+        session.refresh(existing_book)
+
+    if existing_book in user.books:
+        raise HTTPException(status_code=409, detail='Book already added')
+
+    user.books.append(existing_book)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return {
+        "message": "Book added",
+        "user_id": user.id,
+        "book_id": existing_book.id,
+        "book_ids": [book.id for book in user.books],
+    }
+    

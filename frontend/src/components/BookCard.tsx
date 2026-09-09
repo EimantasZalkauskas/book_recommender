@@ -7,6 +7,7 @@ import CardMedia from '@mui/material/CardMedia';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import default_image from '../assets/images/cover_default.png';
+import { useAuth } from '../context/AuthContext';
 
 
 interface props {
@@ -23,6 +24,7 @@ interface props {
 }
 
 export default function BookCard(props: props) {
+  const { user, login } = useAuth();
   const [image, setImage] = useState(default_image)
   useEffect(()=>{
     if(props.imageLinks != undefined){
@@ -31,7 +33,34 @@ export default function BookCard(props: props) {
     }
   },[props])
   async function addBook(){
-    console.log(props)
+    if(!user){
+      alert('Cannot add books when not logged in')
+    }else{
+      const response = await fetch('/api/books/add',{
+        method:'POST',
+        headers:{'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          user_id: user.id,
+          book_obj: props
+        })
+      })
+      if(response.ok){
+
+        const result = await response.json()
+        console.log(result)
+
+        const updatedUserResponse = await fetch(
+          `/api/users/${encodeURIComponent(user.name)}`
+        )
+
+        if (updatedUserResponse.ok) {
+          login(await updatedUserResponse.json())
+        }
+      } else {
+        const error = await response.json()
+        alert(error.detail ?? 'Failed to add book')
+      }
+    }
   }
 
   return (

@@ -67,7 +67,7 @@ export default function BookFinderSection(){
                         imageLinks={item.volumeInfo.imageLinks}
                         language={item.volumeInfo.language}
                         pageCount={item.volumeInfo.pageCount}
-                        publishingDate={item.volumeInfo.publishingDate}
+                        publishingDate={item.volumeInfo.publishedDate}
                         />
                     </Box>
                 )}

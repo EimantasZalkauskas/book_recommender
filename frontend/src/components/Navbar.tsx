@@ -1,15 +1,24 @@
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import MenuIcon from '@mui/icons-material/Menu';
+import { Box } from '@mui/material';
 import AppBar from '@mui/material/AppBar';
+import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import * as React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import LoginDrawer from './LoginDrawer';
 
 export default function Navbar() {
+    const user = useAuth();
+    const {logout} = useAuth();
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+    const [open, setOpen] = React.useState(false);
+    const navigate = useNavigate();
 
 
     const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -20,6 +29,21 @@ export default function Navbar() {
         setAnchorEl(null);
     };
 
+    function toggleLoginDrawer(newOpen: boolean) {
+      setAnchorEl(null);
+      setOpen(newOpen)
+    }
+
+    function redirectToProfile(){
+      setAnchorEl(null);
+      navigate('/user')
+    }
+
+    function logoutUser(){
+      setAnchorEl(null);
+      logout();
+      window.location.reload();
+    }
 
     return (
 
@@ -62,9 +86,19 @@ export default function Navbar() {
                 }}
                 open={Boolean(anchorEl)}
                 onClose={handleClose}
-              >
-                <MenuItem onClick={handleClose}>Profile</MenuItem>
-                <MenuItem onClick={handleClose}>My account</MenuItem>
+              > {!user.user ? 
+                        <Box>
+                          <MenuItem onClick={()=> toggleLoginDrawer(true)}>Login</MenuItem> 
+                          <Drawer open={open} onClose={() => toggleLoginDrawer(false)}>
+                            <LoginDrawer />
+                          </Drawer>
+                        </Box>
+                      :  
+                      <div>
+                        <MenuItem onClick={()=>redirectToProfile()}>Profile</MenuItem>
+                        <MenuItem onClick={()=>logoutUser()}>Logout</MenuItem>
+                      </div>    
+                      }
               </Menu>
             </div>
         </Toolbar>

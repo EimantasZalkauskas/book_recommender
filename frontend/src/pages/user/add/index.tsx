@@ -7,7 +7,18 @@ export default function CreateUserPage() {
 
   async function addUser(){
     console.log(userName);
-    const response = await fetch('')
+    const response = await fetch(`/api/users/add`,{
+      method:"POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body:JSON.stringify({
+        name:userName,
+        books:[]
+      })
+    })
+    const json = await response.json()
+    console.log(json)
   }
 
   return (
